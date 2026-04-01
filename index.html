@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>나 기욥찌?</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+    }
+
+    body {
+      background: #ffdbe8;
+      position: relative;
+    }
+
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .center-box {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 2;
+    }
+
+    .title {
+      font-size: 52px;
+      font-weight: 800;
+      color: #c2185b;
+      margin-bottom: 36px;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .button-wrap {
+      position: relative;
+      width: 520px;
+      height: 180px;
+      margin: 0 auto;
+    }
+
+    .btn {
+      width: 200px;
+      height: 90px;
+      border: none;
+      border-radius: 20px;
+      font-size: 32px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, left 0.25s ease, top 0.25s ease;
+      position: absolute;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+    }
+
+    #yesBtn {
+      left: 40px;
+      top: 40px;
+      background: #ff4f93;
+      color: white;
+    }
+
+    #noBtn {
+      left: 280px;
+      top: 40px;
+      background: white;
+      color: #ff4f93;
+      border: 3px solid #ff4f93;
+    }
+
+    #finalScreen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+      background: #ffdbe8;
+    }
+
+    #finalText {
+      font-size: 72px;
+      font-weight: 900;
+      color: #c2185b;
+      text-align: center;
+      user-select: none;
+      text-shadow: 0 4px 10px rgba(255,255,255,0.5);
+    }
+
+    #fireworks {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    @media (max-width: 640px) {
+      .title {
+        font-size: 36px;
+      }
+
+      .button-wrap {
+        width: 340px;
+        height: 260px;
+      }
+
+      .btn {
+        width: 140px;
+        height: 72px;
+        font-size: 24px;
+      }
+
+      #yesBtn {
+        left: 15px;
+        top: 40px;
+      }
+
+      #noBtn {
+        left: 185px;
+        top: 40px;
+      }
+
+      #finalText {
+        font-size: 44px;
+        padding: 0 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="center-box" id="mainBox">
+      <div class="title">나 기욥찌?</div>
+      <div class="button-wrap" id="buttonWrap">
+        <button class="btn" id="yesBtn">YES</button>
+        <button class="btn" id="noBtn">NO</button>
+      </div>
+    </div>
+
+    <div id="finalScreen">
+      <div id="finalText">나도 알아!</div>
+    </div>
+
+    <canvas id="fireworks"></canvas>
+  </div>
+
+  <script>
+    const noBtn = document.getElementById("noBtn");
+    const yesBtn = document.getElementById("yesBtn");
+    const buttonWrap = document.getElementById("buttonWrap");
+    const mainBox = document.getElementById("mainBox");
+    const finalScreen = document.getElementById("finalScreen");
+    const canvas = document.getElementById("fireworks");
+    const ctx = canvas.getContext("2d");
+
+    let particles = [];
+    let animationId = null;
+    let fireworkTimer = null;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    function moveNoButton() {
+      const wrapRect = buttonWrap.getBoundingClientRect();
+      const btnWidth = noBtn.offsetWidth;
+      const btnHeight = noBtn.offsetHeight;
+
+      const maxX = wrapRect.width - btnWidth;
+      const maxY = wrapRect.height - btnHeight;
+
+      let newX = Math.random() * maxX;
+      let newY = Math.random() * maxY;
+
+      const yesX = yesBtn.offsetLeft;
+      const yesY = yesBtn.offsetTop;
+
+      while (Math.abs(newX - yesX) < 120 && Math.abs(newY - yesY) < 80) {
+        newX = Math.random() * maxX;
+        newY = Math.random() * maxY;
+      }
+
+      noBtn.style.left = `${newX}px`;
+      noBtn.style.top = `${newY}px`;
+    }
+
+    noBtn.addEventListener("mouseenter", moveNoButton);
+    noBtn.addEventListener("touchstart", function (e) {
+      e.preventDefault();
+      moveNoButton();
+    }, { passive: false });
+
+    function createFirework(x, y) {
+      const count = 80;
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = Math.random() * 4 + 2;
+        const hue = Math.floor(Math.random() * 360);
+
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          alpha: 1,
+          size: Math.random() * 3 + 2,
+          gravity: 0.03 + Math.random() * 0.03,
+          color: `hsl(${hue}, 100%, 60%)`
+        });
+      }
+    }
+
+    function animateFireworks() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += p.gravity;
+        p.alpha -= 0.015;
+
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 1;
+      animationId = requestAnimationFrame(animateFireworks);
+    }
+
+    function startCelebration() {
+      mainBox.style.display = "none";
+      finalScreen.style.display = "flex";
+      canvas.style.display = "block";
+
+      createFirework(window.innerWidth * 0.25, window.innerHeight * 0.35);
+      createFirework(window.innerWidth * 0.5, window.innerHeight * 0.25);
+      createFirework(window.innerWidth * 0.75, window.innerHeight * 0.35);
+
+      animateFireworks();
+
+      fireworkTimer = setInterval(() => {
+        const x = Math.random() * window.innerWidth;
+        const y = Math.random() * (window.innerHeight * 0.55) + 40;
+        createFirework(x, y);
+      }, 500);
+    }
+
+    yesBtn.addEventListener("click", startCelebration);
+  </script>
+</body>
+</html>
