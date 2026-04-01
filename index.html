@@ -35,6 +35,7 @@
       transform: translate(-50%, -50%);
       text-align: center;
       z-index: 2;
+      pointer-events: none;
     }
 
     .title {
@@ -48,8 +49,8 @@
 
     .button-wrap {
       position: relative;
-      width: 520px;
-      height: 180px;
+      width: 260px;
+      height: 100px;
       margin: 0 auto;
     }
 
@@ -62,8 +63,7 @@
       font-weight: 800;
       cursor: pointer;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
-      transition: transform 0.15s ease, box-shadow 0.15s ease, left 0.25s ease, top 0.25s ease;
-      position: absolute;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
 
     .btn:hover {
@@ -72,18 +72,21 @@
     }
 
     #yesBtn {
-      left: 40px;
-      top: 40px;
       background: #ff4f93;
       color: white;
+      position: relative;
+      z-index: 3;
+      pointer-events: auto;
     }
 
     #noBtn {
-      left: 280px;
-      top: 40px;
+      position: fixed;
+      left: 65%;
+      top: 58%;
       background: white;
       color: #ff4f93;
       border: 3px solid #ff4f93;
+      z-index: 10;
     }
 
     #finalScreen {
@@ -92,7 +95,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 3;
+      z-index: 20;
       background: #ffdbe8;
     }
 
@@ -111,7 +114,7 @@
       width: 100%;
       height: 100%;
       display: none;
-      z-index: 4;
+      z-index: 25;
       pointer-events: none;
     }
 
@@ -121,24 +124,14 @@
       }
 
       .button-wrap {
-        width: 340px;
-        height: 260px;
+        width: 180px;
+        height: 80px;
       }
 
       .btn {
         width: 140px;
         height: 72px;
         font-size: 24px;
-      }
-
-      #yesBtn {
-        left: 15px;
-        top: 40px;
-      }
-
-      #noBtn {
-        left: 185px;
-        top: 40px;
       }
 
       #finalText {
@@ -152,11 +145,12 @@
   <div id="app">
     <div class="center-box" id="mainBox">
       <div class="title">나 기욥찌?</div>
-      <div class="button-wrap" id="buttonWrap">
+      <div class="button-wrap">
         <button class="btn" id="yesBtn">YES</button>
-        <button class="btn" id="noBtn">NO</button>
       </div>
     </div>
+
+    <button class="btn" id="noBtn">NO</button>
 
     <div id="finalScreen">
       <div id="finalText">나도 알아!</div>
@@ -168,7 +162,6 @@
   <script>
     const noBtn = document.getElementById("noBtn");
     const yesBtn = document.getElementById("yesBtn");
-    const buttonWrap = document.getElementById("buttonWrap");
     const mainBox = document.getElementById("mainBox");
     const finalScreen = document.getElementById("finalScreen");
     const canvas = document.getElementById("fireworks");
@@ -186,33 +179,81 @@
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    function moveNoButton() {
-      const wrapRect = buttonWrap.getBoundingClientRect();
+    function getDistance(x1, y1, x2, y2) {
+      const dx = x1 - x2;
+      const dy = y1 - y2;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function moveNoButtonFar(cursorX = null, cursorY = null) {
       const btnWidth = noBtn.offsetWidth;
       const btnHeight = noBtn.offsetHeight;
 
-      const maxX = wrapRect.width - btnWidth;
-      const maxY = wrapRect.height - btnHeight;
+      const padding = 20;
+      const maxX = window.innerWidth - btnWidth - padding;
+      const maxY = window.innerHeight - btnHeight - padding;
 
-      let newX = Math.random() * maxX;
-      let newY = Math.random() * maxY;
+      const yesRect = yesBtn.getBoundingClientRect();
+      const titleRect = mainBox.getBoundingClientRect();
 
-      const yesX = yesBtn.offsetLeft;
-      const yesY = yesBtn.offsetTop;
+      let newX = 0;
+      let newY = 0;
+      let tries = 0;
 
-      while (Math.abs(newX - yesX) < 120 && Math.abs(newY - yesY) < 80) {
-        newX = Math.random() * maxX;
-        newY = Math.random() * maxY;
-      }
+      do {
+        newX = Math.random() * (maxX - padding) + padding;
+        newY = Math.random() * (maxY - padding) + padding;
+        tries++;
+
+        const newCenterX = newX + btnWidth / 2;
+        const newCenterY = newY + btnHeight / 2;
+
+        const yesCenterX = yesRect.left + yesRect.width / 2;
+        const yesCenterY = yesRect.top + yesRect.height / 2;
+
+        const titleCenterX = titleRect.left + titleRect.width / 2;
+        const titleCenterY = titleRect.top + titleRect.height / 2;
+
+        const farFromYes = getDistance(newCenterX, newCenterY, yesCenterX, yesCenterY) > 240;
+        const farFromTitle = getDistance(newCenterX, newCenterY, titleCenterX, titleCenterY) > 220;
+        const farFromCursor = cursorX === null || cursorY === null
+          ? true
+          : getDistance(newCenterX, newCenterY, cursorX, cursorY) > 260;
+
+        if (farFromYes && farFromTitle && farFromCursor) {
+          break;
+        }
+      } while (tries < 80);
 
       noBtn.style.left = `${newX}px`;
       noBtn.style.top = `${newY}px`;
     }
 
-    noBtn.addEventListener("mouseenter", moveNoButton);
+    function escapeFromCursor(e) {
+      const rect = noBtn.getBoundingClientRect();
+      const btnCenterX = rect.left + rect.width / 2;
+      const btnCenterY = rect.top + rect.height / 2;
+
+      const distance = getDistance(e.clientX, e.clientY, btnCenterX, btnCenterY);
+
+      if (distance < 180) {
+        moveNoButtonFar(e.clientX, e.clientY);
+
+        if (distance < 110) {
+          setTimeout(() => moveNoButtonFar(e.clientX, e.clientY), 40);
+        }
+      }
+    }
+
+    document.addEventListener("mousemove", escapeFromCursor);
+    noBtn.addEventListener("mouseenter", moveNoButtonFar);
+    noBtn.addEventListener("mousedown", function (e) {
+      e.preventDefault();
+      moveNoButtonFar(e.clientX, e.clientY);
+    });
     noBtn.addEventListener("touchstart", function (e) {
       e.preventDefault();
-      moveNoButton();
+      moveNoButtonFar();
     }, { passive: false });
 
     function createFirework(x, y) {
@@ -262,6 +303,7 @@
     }
 
     function startCelebration() {
+      noBtn.style.display = "none";
       mainBox.style.display = "none";
       finalScreen.style.display = "flex";
       canvas.style.display = "block";
@@ -280,6 +322,8 @@
     }
 
     yesBtn.addEventListener("click", startCelebration);
+
+    moveNoButtonFar();
   </script>
 </body>
 </html>
